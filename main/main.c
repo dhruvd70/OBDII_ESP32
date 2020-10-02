@@ -22,7 +22,7 @@ static const int RX_BUF_SIZE_1 = 1024;
 static const int RX_BUF_SIZE_2 = 1024;
 
 // uart_1 for comm. with GPS/GSM
-void uart_1(void)
+void UART_GPS_GSM(void)
 {
 	const uart_config_t uart_config = {
 			.baud_rate = 115200,   // set baud rate
@@ -40,7 +40,7 @@ void uart_1(void)
 }
 
 // uart_2 comm. for elm327
-void uart_2(void)
+void UART_ELM327(void)
 {
 	const uart_config_t uart_config = {
 			.baud_rate = 38400,   // set baud rate
@@ -58,22 +58,24 @@ void uart_2(void)
 }
 
 //tx to gps/gsm
-static void tx_task_1(void *arg)
+static void TX_GPS_GSM(void *arg)
 {
-    static const char *TX_TASK_TAG = "TX_TASK_1";
+    static const char *TX_TASK_TAG = "TX_TO_GPS/GSM";
     esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
     while (1)
-    {
-    	sendData(TX_TASK_TAG, " ");
+       {
+       	const int len = strlen("");
+       	const int txBytes = uart_write_bytes(UART_NUM_1, "", len);
+       	ESP_LOGI(TX_TASK_TAG, "Wrote %d bytes", txBytes);
 
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-    }
+           vTaskDelay(2000 / portTICK_PERIOD_MS);
+       }
 }
 
 //rx from gps/gsm
-static void rx_task_1(void *arg)
+static void RX_GPS_GSM(void *arg)
 {
-	static const char *RX_TASK_TAG = "RX_TASK_1";
+	static const char *RX_TASK_TAG = "RX_FROM_ELM327";
 	esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
 	uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE_1+1);
 
@@ -94,22 +96,24 @@ static void rx_task_1(void *arg)
 }
 
 // tx to elm327
-static void tx_task_2(void *arg)
+static void TX_ELM327(void *arg)
 {
-    static const char *TX_TASK_TAG = "TX_TASK_2";
+    static const char *TX_TASK_TAG = "TX_TO_ELM327";
     esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
     while (1)
     {
-    	sendData(TX_TASK_TAG, " ");
+    	const int len = strlen("");
+    	const int txBytes = uart_write_bytes(UART_NUM_2, "", len);
+    	ESP_LOGI(TX_TASK_TAG, "Wrote %d bytes", txBytes);
 
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
 
 // rx from elm327
-static void rx_task_2(void *arg)
+static void RX_ELM327(void *arg)
 {
-	static const char *RX_TASK_TAG = "RX_TASK_2";
+	static const char *RX_TASK_TAG = "RX_FROM_ELM327";
 	esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
 	uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE_2+1);
 
@@ -129,25 +133,17 @@ static void rx_task_2(void *arg)
 
 }
 
-// function to send data using uart
-int sendData(const char* logName, const char* data)
-{
-    const int len = strlen(data);
-    const int txBytes = uart_write_bytes(UART_NUM_1, data, len);
-    ESP_LOGI(logName, "Wrote %d bytes", txBytes);
-    return txBytes;
-}
 
 void app_main(void)
 {
-	uart_1();
-	uart_2();
+	UART_GPS_GSM();
+	UART_GPS_GSM();
 
-	xTaskCreate(tx_task_1, "uart_1_tx_task", 1024*2, NULL, 10, NULL);
-    xTaskCreate(rx_task_1, "uart_1_rx_task", 1024*2, NULL, 10, NULL);
+	xTaskCreate(TX_GPS_GSM, "TX_GPS_GSM", 1024*2, NULL, 10, NULL);
+    xTaskCreate(RX_GPS_GSM, "RX_GPS_GSM", 1024*2, NULL, 10, NULL);
 
-    xTaskCreate(tx_task_2, "uart_1_tx_task", 1024*2, NULL, 10, NULL);
-    xTaskCreate(rx_task_2, "uart_2_rx_task", 1024*2, NULL, 10, NULL);
+    xTaskCreate(TX_ELM327, "TX_ELM327", 1024*2, NULL, 10, NULL);
+    xTaskCreate(RX_ELM327, "RX_ELM327", 1024*2, NULL, 10, NULL);
 
 }
 
